@@ -1,16 +1,30 @@
-# Secure Segmented Campus + Branch Network (Cisco Packet Tracer 9.0.1)
+# Self-Healing Network: Automated Compliance Auditing and Drift Remediation
+
+A Cisco Packet Tracer 9.0.1 campus + branch network that serves as a hardened, verified **golden baseline**. Router and switch configs are later audited against this baseline to detect configuration drift and restore compliance.
+
+> **Status:** Phase 1 (secure baseline network) is complete in this repo. The auditing and remediation tooling (Phases 2–4) is planned and not yet included.
 
 ## Problem Statement
 
-A small organisation runs one campus site (staff, guests, servers, IT admins) and one branch office. On a flat, default-configured network:
+Network devices drift away from their intended secure configuration over time. Causes include manual changes, quick troubleshooting fixes that are never reverted, misconfiguration and malicious tampering. A single changed line can open a hole: a removed ACL, disabled port security, Telnet re-enabled, or an unused port turned back on. In most small organisations:
+
+- Nobody holds a formal, verified record of what each device's configuration *should* be.
+- Drift is found only after an outage or security incident, often weeks later.
+- Checking compliance means reading `show running-config` on every device by hand, which is slow and error-prone.
+- Fixing drift is manual, so the network stays non-compliant until someone notices and acts.
+
+This project addresses the problem in two parts:
+
+1. **Define "compliant".** Build a segmented, hardened network for one campus site (staff, guests, servers, IT admins) and one branch office. Hardening uses VLAN segmentation, inter-VLAN routing, ACLs, port security, SSH-only management, authenticated OSPF and central Syslog/NTP. Every expected behaviour is verified, then the result is saved as the golden baseline (`1_golden.pkt` + running configs).
+2. **Detect and heal drift.** Compare current device configs against the golden baseline, report every deviation as a compliance violation, and push corrective commands to restore the baseline.
+
+Without the hardening baseline, the network itself would have these weaknesses:
 
 - Guest devices can reach staff PCs and internal servers.
 - Anyone on the LAN can try to log in to routers and switches, often over cleartext Telnet.
 - Unused switch ports are live, so anyone can plug in a rogue device.
 - Devices have no central logging or common time, so incidents cannot be traced.
 - Branch routes are configured by hand and routing updates are not authenticated.
-
-The goal is to design, configure and verify a network that fixes these issues using VLAN segmentation, inter-VLAN routing, ACLs, port security, SSH-only management, authenticated OSPF and central Syslog/NTP. The verified result is saved as a **golden baseline** (`1_golden.pkt` + running configs) that a configuration-audit tool can later compare live devices against.
 
 ## Topology
 
@@ -76,8 +90,19 @@ DHCP excludes `.1`–`.10` in the Staff and Guest pools.
 4. **Branch connectivity.** The branch LAN is learned dynamically through authenticated OSPF, with no static routes.
 5. **Rogue device protection.** An unknown device plugged into an access port, or more than 2 MACs on one port, puts the port in err-disabled state. Unused ports are dead.
 6. **Centralised logging and time sync.** All devices send timestamped logs to SRV1 and sync time from it, for incident investigation.
-7. **Configuration baseline/audit.** The verified configs become the golden reference. Later configs can be diffed against them to detect drift or tampering (e.g. ACL removed, port security disabled, Telnet re-enabled).
-8. **Teaching/lab exercise.** Demonstrates VLANs, trunking, inter-VLAN routing, DHCP, ACLs, OSPF and device hardening in one topology.
+7. **Compliance auditing (planned).** Current running configs are compared against the golden configs. Each deviation is reported as a violation: an ACL removed, port security disabled, Telnet re-enabled, an unused port no-shut, or OSPF authentication removed.
+8. **Drift remediation (planned).** For each violation, corrective commands are generated to restore the baseline. Example: re-apply `ip access-group GUEST_IN in` on `Gi0/0.30`.
+9. **Tamper evidence.** Syslog entries on SRV1, with NTP-synced timestamps, show when a drifting change was made and from where.
+10. **Teaching/lab exercise.** Demonstrates VLANs, trunking, inter-VLAN routing, DHCP, ACLs, OSPF, device hardening and configuration compliance in one topology.
+
+## Roadmap
+
+| Phase | Scope | Status |
+|---|---|---|
+| 1. Secure baseline | Topology, hardened configs, verification tests, golden configs | Done |
+| 2. Compliance audit | Parse running configs, compare to golden, report violations | Planned |
+| 3. Drift simulation | Inject misconfigurations (e.g. remove `GUEST_IN`, enable Telnet) to test detection | Planned |
+| 4. Remediation | Generate and apply corrective commands, then re-verify compliance | Planned |
 
 ## Files
 
