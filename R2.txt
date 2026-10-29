@@ -1,0 +1,39 @@
+enable
+configure terminal
+hostname R2
+no ip domain-lookup
+ip domain-name rvu.lab
+username admin privilege 15 secret Admin@123
+enable secret Cisco@123
+service password-encryption
+banner motd #Authorized access only#
+crypto key generate rsa modulus 1024
+ip ssh version 2
+service timestamps log datetime msec
+logging host 192.168.20.10
+ntp server 192.168.20.10
+ip access-list standard MGMT_ONLY
+ permit 192.168.99.0 0.0.0.255
+exit
+interface GigabitEthernet0/0
+ ip address 10.0.12.2 255.255.255.252
+ ip ospf message-digest-key 1 md5 OSPFKey1
+ ip ospf authentication message-digest
+ no shutdown
+interface GigabitEthernet0/1
+ ip address 172.16.1.1 255.255.255.0
+ no shutdown
+exit
+router ospf 1
+ router-id 2.2.2.2
+ passive-interface GigabitEthernet0/1
+ network 10.0.12.0 0.0.0.3 area 0
+ network 172.16.1.0 0.0.0.255 area 0
+exit
+line vty 0 4
+ login local
+ transport input ssh
+ access-class MGMT_ONLY in
+exit
+end
+write memory

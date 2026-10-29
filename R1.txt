@@ -1,0 +1,74 @@
+enable
+configure terminal
+hostname R1
+no ip domain-lookup
+ip domain-name rvu.lab
+username admin privilege 15 secret Admin@123
+enable secret Cisco@123
+service password-encryption
+banner motd #Authorized access only#
+crypto key generate rsa modulus 1024
+ip ssh version 2
+service timestamps log datetime msec
+logging host 192.168.20.10
+ntp server 192.168.20.10
+ip access-list standard MGMT_ONLY
+ permit 192.168.99.0 0.0.0.255
+exit
+interface GigabitEthernet0/0
+ no shutdown
+interface GigabitEthernet0/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+interface GigabitEthernet0/0.20
+ encapsulation dot1Q 20
+ ip address 192.168.20.1 255.255.255.0
+interface GigabitEthernet0/0.30
+ encapsulation dot1Q 30
+ ip address 192.168.30.1 255.255.255.0
+ ip access-group GUEST_IN in
+interface GigabitEthernet0/0.99
+ encapsulation dot1Q 99 native
+ ip address 192.168.99.1 255.255.255.0
+interface GigabitEthernet0/1
+ ip address 10.0.12.1 255.255.255.252
+ ip ospf message-digest-key 1 md5 OSPFKey1
+ ip ospf authentication message-digest
+ no shutdown
+exit
+ip access-list extended GUEST_IN
+ deny ip 192.168.30.0 0.0.0.255 192.168.10.0 0.0.0.255
+ deny ip 192.168.30.0 0.0.0.255 192.168.20.0 0.0.0.255
+ deny ip 192.168.30.0 0.0.0.255 192.168.99.0 0.0.0.255
+ permit ip any any
+exit
+ip dhcp excluded-address 192.168.10.1 192.168.10.10
+ip dhcp excluded-address 192.168.30.1 192.168.30.10
+ip dhcp pool STAFF
+ network 192.168.10.0 255.255.255.0
+ default-router 192.168.10.1
+ dns-server 192.168.20.10
+ip dhcp pool GUEST
+ network 192.168.30.0 255.255.255.0
+ default-router 192.168.30.1
+ dns-server 192.168.20.10
+exit
+router ospf 1
+ router-id 1.1.1.1
+ passive-interface GigabitEthernet0/0.10
+ passive-interface GigabitEthernet0/0.20
+ passive-interface GigabitEthernet0/0.30
+ passive-interface GigabitEthernet0/0.99
+ network 192.168.10.0 0.0.0.255 area 0
+ network 192.168.20.0 0.0.0.255 area 0
+ network 192.168.30.0 0.0.0.255 area 0
+ network 192.168.99.0 0.0.0.255 area 0
+ network 10.0.12.0 0.0.0.3 area 0
+exit
+line vty 0 4
+ login local
+ transport input ssh
+ access-class MGMT_ONLY in
+exit
+end
+write memory

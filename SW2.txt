@@ -1,0 +1,83 @@
+enable
+configure terminal
+hostname SW2
+no ip domain-lookup
+ip domain-name rvu.lab
+username admin privilege 15 secret Admin@123
+enable secret Cisco@123
+service password-encryption
+banner motd #Authorized access only#
+crypto key generate rsa modulus 1024
+ip ssh version 2
+service timestamps log datetime msec
+logging host 192.168.20.10
+ntp server 192.168.20.10
+ip access-list standard MGMT_ONLY
+ permit 192.168.99.0 0.0.0.255
+exit
+vlan 10
+ name Staff
+vlan 20
+ name Servers
+vlan 30
+ name Guest
+vlan 99
+ name Management
+vlan 999
+ name UNUSED
+exit
+interface vlan 99
+ ip address 192.168.99.12 255.255.255.0
+ no shutdown
+exit
+ip default-gateway 192.168.99.1
+interface FastEthernet0/1
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,99
+ no shutdown
+interface FastEthernet0/2
+ switchport mode access
+ switchport access vlan 10
+ spanning-tree portfast
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation shutdown
+ no shutdown
+interface FastEthernet0/3
+ switchport mode access
+ switchport access vlan 10
+ spanning-tree portfast
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation shutdown
+ no shutdown
+interface FastEthernet0/4
+ switchport mode access
+ switchport access vlan 30
+ spanning-tree portfast
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation shutdown
+ no shutdown
+exit
+interface range FastEthernet0/5 - 24
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+exit
+interface range GigabitEthernet0/1 - 2
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+exit
+line vty 0 15
+ login local
+ transport input ssh
+ access-class MGMT_ONLY in
+exit
+end
+write memory
